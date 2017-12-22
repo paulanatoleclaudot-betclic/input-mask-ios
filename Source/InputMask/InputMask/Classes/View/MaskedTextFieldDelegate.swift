@@ -27,7 +27,6 @@ import UIKit
         didFillMandatoryCharacters complete: Bool,
         didExtractValue value: String
     )
-    
 }
 
 
@@ -44,8 +43,11 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
     private var _maskFormat:            String
     private var _autocomplete:          Bool
     private var _autocompleteOnFocus:   Bool
+    fileprivate var oldCaretPosition = 0
     
     public var mask: Mask
+    open var strongPlaceholder: String?
+    
     
     @IBInspectable public var maskFormat: String {
         get {
@@ -86,6 +88,18 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
         self._autocomplete = false
         self._autocompleteOnFocus = false
         super.init()
+    }
+    
+    public init(format: String, strongPlaceholder: String, andField field: UITextField? = nil) {
+        self._maskFormat = format
+        self.mask = try! Mask.getOrCreate(withFormat: format)
+        self._autocomplete = false
+        self._autocompleteOnFocus = false
+        self.strongPlaceholder = strongPlaceholder
+        super.init()
+        
+        field?.text = strongPlaceholder
+        field?.delegate = self
     }
     
     public override convenience init() {
@@ -172,7 +186,7 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
         if isDeletion(
             inRange: range,
             string: string
-        ) {
+            ) {
             (extractedValue, complete) = self.deleteText(inRange: range, inField: textField)
         } else {
             (extractedValue, complete) = self.modifyText(inRange: range, inField: textField, withText: string)
@@ -183,14 +197,18 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
             didFillMandatoryCharacters: complete,
             didExtractValue: extractedValue
         )
+        
+        let strCount: Int = strongPlaceholder!.count
+        
         let _ = self.listener?.textField?(textField, shouldChangeCharactersIn: range, replacementString: string)
+        
         return false
     }
     
     open func deleteText(
         inRange range: NSRange,
         inField field: UITextField
-    ) -> (String, Bool) {
+        ) -> (String, Bool) {
         let text: String = self.replaceCharacters(
             inText: field.text,
             range: range,
@@ -206,6 +224,7 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
         )
         
         field.text = result.formattedText.string
+        appendStrongPlaceholderIfNeeded(toField: field)
         self.setCaretPosition(range.location, inField: field)
         
         return (result.extractedValue, result.complete)
@@ -215,7 +234,7 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
         inRange range: NSRange,
         inField field: UITextField,
         withText text: String
-    ) -> (String, Bool) {
+        ) -> (String, Bool) {
         let updatedText: String = self.replaceCharacters(
             inText: field.text,
             range: range,
@@ -231,6 +250,7 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
         )
         
         field.text = result.formattedText.string
+        appendStrongPlaceholderIfNeeded(toField: field)
         let position: Int =
             result.formattedText.string.distance(from: result.formattedText.string.startIndex, to: result.formattedText.caretPosition)
         self.setCaretPosition(position, inField: field)
@@ -238,11 +258,20 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
         return (result.extractedValue, result.complete)
     }
     
+    
+    public func appendStrongPlaceholderIfNeeded(toField field: UITextField) {
+        if let range = strongPlaceholder?.startIndex.advanced(by: caretPosition(inField: field)),
+            let substring = strongPlaceholder?.substring(from: (range)) {
+            field.text = (field.text ?? "") + substring
+        }
+    }
+    
     open func textFieldShouldBeginEditing(_ textField: UITextField) -> Bool {
         return self.listener?.textFieldShouldBeginEditing?(textField) ?? true
     }
     
     open func textFieldDidBeginEditing(_ textField: UITextField) {
+        self.setCaretPosition(oldCaretPosition, inField: textField)
         if self._autocompleteOnFocus && textField.text!.isEmpty {
             let _ = self.textField(
                 textField,
@@ -281,6 +310,7 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
     }
     
     open func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        textField.resignFirstResponder()
         return self.listener?.textFieldShouldReturn?(textField) ?? true
     }
     
@@ -323,8 +353,8 @@ internal extension MaskedTextFieldDelegate {
     func caretPosition(inField field: UITextField) -> Int {
         // Workaround for non-optional `field.beginningOfDocument`, which could actually be nil if field doesn't have focus
         guard field.isFirstResponder
-        else {
-            return field.text?.characters.count ?? 0
+            else {
+                return field.text?.characters.count ?? 0
         }
         
         if let range: UITextRange = field.selectedTextRange {
@@ -338,10 +368,10 @@ internal extension MaskedTextFieldDelegate {
     func setCaretPosition(_ position: Int, inField field: UITextField) {
         // Workaround for non-optional `field.beginningOfDocument`, which could actually be nil if field doesn't have focus
         guard field.isFirstResponder
-        else {
-            return
+            else {
+                return
         }
-
+        
         if position > field.text!.characters.count {
             return
         }
@@ -349,6 +379,8 @@ internal extension MaskedTextFieldDelegate {
         let from: UITextPosition = field.position(from: field.beginningOfDocument, offset: position)!
         let to:   UITextPosition = field.position(from: from, offset: 0)!
         field.selectedTextRange = field.textRange(from: from, to: to)
+        oldCaretPosition = position
     }
     
 }
+

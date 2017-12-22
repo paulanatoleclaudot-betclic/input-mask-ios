@@ -73,7 +73,7 @@ open class PolyMaskTextFieldDelegate: MaskedTextFieldDelegate {
     override open func deleteText(
         inRange range: NSRange,
         inField field: UITextField
-    ) -> (String, Bool) {
+        ) -> (String, Bool) {
         let text: String = self.replaceCharacters(
             inText: field.text,
             range: range,
@@ -95,6 +95,7 @@ open class PolyMaskTextFieldDelegate: MaskedTextFieldDelegate {
         )
         
         field.text = result.formattedText.string
+        appendStrongPlaceholderIfNeeded(toField: field)
         self.setCaretPosition(range.location, inField: field)
         
         return (result.extractedValue, result.complete)
@@ -104,7 +105,7 @@ open class PolyMaskTextFieldDelegate: MaskedTextFieldDelegate {
         inRange range: NSRange,
         inField field: UITextField,
         withText text: String
-    ) -> (String, Bool) {
+        ) -> (String, Bool) {
         let updatedText: String = self.replaceCharacters(
             inText: field.text,
             range: range,
@@ -126,12 +127,14 @@ open class PolyMaskTextFieldDelegate: MaskedTextFieldDelegate {
         )
         
         field.text = result.formattedText.string
+        appendStrongPlaceholderIfNeeded(toField: field)
         let position: Int =
             result.formattedText.string.distance(from: result.formattedText.string.startIndex, to: result.formattedText.caretPosition)
         self.setCaretPosition(position, inField: field)
         
         return (result.extractedValue, result.complete)
     }
+    
     
     open override var debugDescription: String {
         get {
@@ -149,7 +152,7 @@ internal extension PolyMaskTextFieldDelegate {
         forText text: String,
         caretPosition: String.Index,
         autocomplete: Bool
-    ) -> Mask {
+        ) -> Mask {
         let primaryAffinity: Int = self.calculateAffinity(
             ofMask: self.mask,
             forText: text,
@@ -196,14 +199,15 @@ internal extension PolyMaskTextFieldDelegate {
         forText text: String,
         caretPosition: String.Index,
         autocomplete: Bool
-    ) -> Int {
+        ) -> Int {
         return mask.apply(
             toText: CaretString(
                 string: text,
                 caretPosition: caretPosition
             ),
             autocomplete: autocomplete
-        ).affinity
+            ).affinity
     }
     
 }
+
