@@ -43,7 +43,7 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
     private var _maskFormat:            String
     private var _autocomplete:          Bool
     private var _autocompleteOnFocus:   Bool
-    private var oldCaretPosition = 0
+    fileprivate var oldCaretPosition = 0
     
     public var mask: Mask
     open var strongPlaceholder: NSAttributedString?
@@ -386,6 +386,7 @@ internal extension MaskedTextFieldDelegate {
         let from: UITextPosition = field.position(from: field.beginningOfDocument, offset: position)!
         let to:   UITextPosition = field.position(from: from, offset: 0)!
         field.selectedTextRange = field.textRange(from: from, to: to)
+        oldCaretPosition = position
     }
     
 }
