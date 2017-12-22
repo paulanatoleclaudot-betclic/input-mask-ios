@@ -12,12 +12,14 @@ import InputMask
 
 open class ViewController: UIViewController, MaskedTextFieldDelegateListener {
     
-    var listener: MaskedTextFieldDelegate!
+    @IBOutlet weak var listener: PolyMaskTextFieldDelegate!
     @IBOutlet weak var field: UITextField!
     
     open override func viewDidLoad() {
         super.viewDidLoad()
-        listener = MaskedTextFieldDelegate(format: "[00]{/}[00]{/}[0000]", strongPlaceholder: "MM/JJ/AAAA", andField: field)
+        listener.affineFormats = [
+            "8 ([000]) [000] [00] [00]"
+        ]
     }
     
     open func textField(
