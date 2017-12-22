@@ -43,10 +43,10 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
     private var _maskFormat:            String
     private var _autocomplete:          Bool
     private var _autocompleteOnFocus:   Bool
-    fileprivate var oldCaretPosition = 0
+    private var oldCaretPosition = 0
     
     public var mask: Mask
-    open var strongPlaceholder: String?
+    open var strongPlaceholder: NSAttributedString?
     
     
     @IBInspectable public var maskFormat: String {
@@ -90,7 +90,7 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
         super.init()
     }
     
-    public init(format: String, strongPlaceholder: String, andField field: UITextField? = nil) {
+    public init(format: String, strongPlaceholder: NSAttributedString, andField field: UITextField? = nil) {
         self._maskFormat = format
         self.mask = try! Mask.getOrCreate(withFormat: format)
         self._autocomplete = false
@@ -98,7 +98,7 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
         self.strongPlaceholder = strongPlaceholder
         super.init()
         
-        field?.text = strongPlaceholder
+        field?.attributedText = strongPlaceholder
         field?.delegate = self
     }
     
@@ -198,8 +198,6 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
             didExtractValue: extractedValue
         )
         
-        let strCount: Int = strongPlaceholder!.count
-        
         let _ = self.listener?.textField?(textField, shouldChangeCharactersIn: range, replacementString: string)
         
         return false
@@ -258,12 +256,22 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
         return (result.extractedValue, result.complete)
     }
     
-    
+    // We do get attributes from strongPlaceholder attributed string and apply them to the strongPlaceholder substring
     public func appendStrongPlaceholderIfNeeded(toField field: UITextField) {
-        if let range = strongPlaceholder?.startIndex.advanced(by: caretPosition(inField: field)),
-            let substring = strongPlaceholder?.substring(from: (range)) {
-            field.text = (field.text ?? "") + substring
+        guard let strongPlaceholder = strongPlaceholder else {
+            return
         }
+        
+        let range = strongPlaceholder.string.startIndex.advanced(by: caretPosition(inField: field))
+        let substring = strongPlaceholder.string.substring(from: (range))
+        let attributedString = NSMutableAttributedString(string: (field.text ?? "") + substring)
+        let strongPlaceholderAttributes = strongPlaceholder.attributes(at: 0,
+                                                                       longestEffectiveRange: nil,
+                                                                       in: NSRange(location: 0, length: strongPlaceholder.length))
+        let substringRange = (attributedString.string as NSString).range(of: substring)
+        
+        attributedString.addAttributes(strongPlaceholderAttributes, range: substringRange)
+        field.attributedText = attributedString
     }
     
     open func textFieldShouldBeginEditing(_ textField: UITextField) -> Bool {
@@ -378,7 +386,7 @@ internal extension MaskedTextFieldDelegate {
         let from: UITextPosition = field.position(from: field.beginningOfDocument, offset: position)!
         let to:   UITextPosition = field.position(from: from, offset: 0)!
         field.selectedTextRange = field.textRange(from: from, to: to)
-        oldCaretPosition = position
     }
     
 }
+
