@@ -310,7 +310,6 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
     }
     
     open func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-        textField.resignFirstResponder()
         return self.listener?.textFieldShouldReturn?(textField) ?? true
     }
     
@@ -383,4 +382,3 @@ internal extension MaskedTextFieldDelegate {
     }
     
 }
-
