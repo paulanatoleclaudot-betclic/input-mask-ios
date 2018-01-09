@@ -43,7 +43,8 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
     private var _maskFormat:            String
     private var _autocomplete:          Bool
     private var _autocompleteOnFocus:   Bool
-    fileprivate var oldCaretPosition = 0
+    private var _oldCaretPosition = 0
+    private var _defaultAttribues: [String: Any]?
     
     public var mask: Mask
     open var strongPlaceholder: NSAttributedString?
@@ -96,6 +97,7 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
         self._autocomplete = false
         self._autocompleteOnFocus = false
         self.strongPlaceholder = strongPlaceholder
+        self._defaultAttribues = field?.defaultTextAttributes
         super.init()
         
         field?.attributedText = strongPlaceholder
@@ -269,6 +271,11 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
                                                                        longestEffectiveRange: nil,
                                                                        in: NSRange(location: 0, length: strongPlaceholder.length))
         let substringRange = (attributedString.string as NSString).range(of: substring)
+        if let userEntry = field.text,
+            let defaultAttributes = _defaultAttribues{
+            let firstSubstringRange = (attributedString.string as NSString).range(of: userEntry)
+            attributedString.addAttributes(defaultAttributes, range: firstSubstringRange)
+        }
         
         attributedString.addAttributes(strongPlaceholderAttributes, range: substringRange)
         field.attributedText = attributedString
@@ -279,7 +286,7 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
     }
     
     open func textFieldDidBeginEditing(_ textField: UITextField) {
-        self.setCaretPosition(oldCaretPosition, inField: textField)
+        self.setCaretPosition(_oldCaretPosition, inField: textField)
         if self._autocompleteOnFocus && textField.text!.isEmpty {
             let _ = self.textField(
                 textField,
@@ -386,8 +393,6 @@ internal extension MaskedTextFieldDelegate {
         let from: UITextPosition = field.position(from: field.beginningOfDocument, offset: position)!
         let to:   UITextPosition = field.position(from: from, offset: 0)!
         field.selectedTextRange = field.textRange(from: from, to: to)
-        oldCaretPosition = position
+        _oldCaretPosition = position
     }
-    
 }
-
