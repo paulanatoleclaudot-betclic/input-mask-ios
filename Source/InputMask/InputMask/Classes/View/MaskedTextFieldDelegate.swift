@@ -43,9 +43,9 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
     private var _maskFormat:            String
     private var _autocomplete:          Bool
     private var _autocompleteOnFocus:   Bool
-    private var _oldCaretPosition = 0
     private var _defaultAttribues: [String: Any]?
-    
+    fileprivate var _oldCaretPosition = 0
+
     public var mask: Mask
     open var strongPlaceholder: NSAttributedString?
     
