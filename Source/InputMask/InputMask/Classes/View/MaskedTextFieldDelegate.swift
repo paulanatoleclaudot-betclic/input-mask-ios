@@ -45,7 +45,8 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
     private var _autocompleteOnFocus:   Bool
     private var _defaultAttribues: [String: Any]?
     fileprivate var _oldCaretPosition = 0
-
+    fileprivate var _fieldValue = ""
+    
     public var mask: Mask
     open var strongPlaceholder: NSAttributedString?
     
@@ -194,6 +195,8 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
             (extractedValue, complete) = self.modifyText(inRange: range, inField: textField, withText: string)
         }
         
+        _fieldValue = extractedValue
+        
         self.listener?.textField?(
             textField,
             didFillMandatoryCharacters: complete,
@@ -209,8 +212,10 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
         inRange range: NSRange,
         inField field: UITextField
         ) -> (String, Bool) {
+        
+        let inText = range.location >= _fieldValue.count ? field.text : _fieldValue
         let text: String = self.replaceCharacters(
-            inText: field.text,
+            inText: inText,
             range: range,
             withCharacters: ""
         )
@@ -235,8 +240,10 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
         inField field: UITextField,
         withText text: String
         ) -> (String, Bool) {
-        let updatedText: String = self.replaceCharacters(
-            inText: field.text,
+        
+        let inText = range.location > _fieldValue.count ? field.text : _fieldValue
+        var updatedText: String = self.replaceCharacters(
+            inText: inText,
             range: range,
             withCharacters: text
         )
@@ -251,6 +258,7 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
         
         field.text = result.formattedText.string
         appendStrongPlaceholderIfNeeded(toField: field)
+        
         let position: Int =
             result.formattedText.string.distance(from: result.formattedText.string.startIndex, to: result.formattedText.caretPosition)
         self.setCaretPosition(position, inField: field)
@@ -396,3 +404,4 @@ internal extension MaskedTextFieldDelegate {
         _oldCaretPosition = position
     }
 }
+
