@@ -358,7 +358,7 @@ internal extension MaskedTextFieldDelegate {
     
     func replaceCharacters(inText text: String?, range: NSRange, withCharacters newText: String) -> String {
         if let text = text {
-            if 0 < range.length {
+            if 0 < range.length && (range.length + range.location) <= text.count {
                 let result = NSMutableString(string: text)
                 result.replaceCharacters(in: range, with: newText)
                 return result as String
