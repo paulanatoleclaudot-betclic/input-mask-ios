@@ -388,12 +388,6 @@ internal extension MaskedTextFieldDelegate {
     }
     
     func setCaretPosition(_ position: Int, inField field: UITextField) {
-        // Workaround for non-optional `field.beginningOfDocument`, which could actually be nil if field doesn't have focus
-        guard field.isFirstResponder
-            else {
-                return
-        }
-        
         if position > field.text!.characters.count {
             return
         }
