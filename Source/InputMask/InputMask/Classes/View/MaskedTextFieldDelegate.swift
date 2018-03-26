@@ -43,9 +43,9 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
     private var _maskFormat:            String
     private var _autocomplete:          Bool
     private var _autocompleteOnFocus:   Bool
-    private var _defaultAttribues: [String: Any]?
-    fileprivate var _oldCaretPosition = 0
-    fileprivate var _fieldValue = ""
+    private var _defaultAttribues: [NSAttributedStringKey: Any]?
+    private var _oldCaretPosition = 0
+    private var _fieldValue = ""
     
     public var mask: Mask
     open var strongPlaceholder: NSAttributedString?
@@ -98,7 +98,12 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
         self._autocomplete = false
         self._autocompleteOnFocus = false
         self.strongPlaceholder = strongPlaceholder
-        self._defaultAttribues = field?.defaultTextAttributes
+        if let field = field {
+            for attribute in field.defaultTextAttributes {
+                _defaultAttribues?[NSAttributedStringKey(rawValue: attribute.key)] = attribute.value
+            }
+        }
+
         super.init()
         
         field?.attributedText = strongPlaceholder
@@ -242,7 +247,7 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
         ) -> (String, Bool) {
         
         let inText = range.location > _fieldValue.count ? field.text : _fieldValue
-        var updatedText: String = self.replaceCharacters(
+        let updatedText: String = self.replaceCharacters(
             inText: inText,
             range: range,
             withCharacters: text
@@ -251,7 +256,7 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
         let result: Mask.Result = self.mask.apply(
             toText: CaretString(
                 string: updatedText,
-                caretPosition: updatedText.index(updatedText.startIndex, offsetBy: self.caretPosition(inField: field) + text.characters.count)
+                caretPosition: updatedText.index(updatedText.startIndex, offsetBy: self.caretPosition(inField: field) + text.count)
             ),
             autocomplete: self.autocomplete
         )
@@ -271,9 +276,10 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
         guard let strongPlaceholder = strongPlaceholder else {
             return
         }
-        
-        let range = strongPlaceholder.string.startIndex.advanced(by: caretPosition(inField: field))
-        let substring = strongPlaceholder.string.substring(from: (range))
+
+        let startIndex = strongPlaceholder.string.index(strongPlaceholder.string.startIndex,
+                                                        offsetBy: caretPosition(inField: field))
+        let substring = String(strongPlaceholder.string[startIndex...])
         let attributedString = NSMutableAttributedString(string: (field.text ?? "") + substring)
         let strongPlaceholderAttributes = strongPlaceholder.attributes(at: 0,
                                                                        longestEffectiveRange: nil,
@@ -353,7 +359,7 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
 internal extension MaskedTextFieldDelegate {
     
     func isDeletion(inRange range: NSRange, string: String) -> Bool {
-        return 0 < range.length && 0 == string.characters.count
+        return 0 < range.length && 0 == string.count
     }
     
     func replaceCharacters(inText text: String?, range: NSRange, withCharacters newText: String) -> String {
@@ -376,7 +382,7 @@ internal extension MaskedTextFieldDelegate {
         // Workaround for non-optional `field.beginningOfDocument`, which could actually be nil if field doesn't have focus
         guard field.isFirstResponder
             else {
-                return field.text?.characters.count ?? 0
+                return field.text?.count ?? 0
         }
         
         if let range: UITextRange = field.selectedTextRange {
@@ -388,7 +394,7 @@ internal extension MaskedTextFieldDelegate {
     }
     
     func setCaretPosition(_ position: Int, inField field: UITextField) {
-        if position > field.text!.characters.count {
+        if position > field.text!.count {
             return
         }
         
