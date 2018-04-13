@@ -43,7 +43,7 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
     private var _maskFormat:            String
     private var _autocomplete:          Bool
     private var _autocompleteOnFocus:   Bool
-    private var _defaultAttribues: [NSAttributedStringKey: Any]?
+    private var _defaultAttribues = [NSAttributedStringKey: Any]()
     private var _oldCaretPosition = 0
     private var _fieldValue = ""
     
@@ -99,11 +99,12 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
         self._autocompleteOnFocus = false
         self.strongPlaceholder = strongPlaceholder
         if let field = field {
+            _defaultAttribues.reserveCapacity(field.defaultTextAttributes.count)
             for attribute in field.defaultTextAttributes {
-                _defaultAttribues?[NSAttributedStringKey(rawValue: attribute.key)] = attribute.value
+                _defaultAttribues[NSAttributedStringKey(rawValue: attribute.key)] = attribute.value
             }
         }
-
+        
         super.init()
         
         field?.attributedText = strongPlaceholder
@@ -276,7 +277,7 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
         guard let strongPlaceholder = strongPlaceholder else {
             return
         }
-
+        
         let startIndex = strongPlaceholder.string.index(strongPlaceholder.string.startIndex,
                                                         offsetBy: caretPosition(inField: field))
         let substring = String(strongPlaceholder.string[startIndex...])
@@ -285,10 +286,9 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
                                                                        longestEffectiveRange: nil,
                                                                        in: NSRange(location: 0, length: strongPlaceholder.length))
         let substringRange = (attributedString.string as NSString).range(of: substring)
-        if let userEntry = field.text,
-            let defaultAttributes = _defaultAttribues{
+        if let userEntry = field.text {
             let firstSubstringRange = (attributedString.string as NSString).range(of: userEntry)
-            attributedString.addAttributes(defaultAttributes, range: firstSubstringRange)
+            attributedString.addAttributes(_defaultAttribues, range: firstSubstringRange)
         }
         
         attributedString.addAttributes(strongPlaceholderAttributes, range: substringRange)
@@ -354,6 +354,9 @@ open class MaskedTextFieldDelegate: NSObject, UITextFieldDelegate {
         }
     }
     
+    open func setCaretToOldPosition(inField field: UITextField) {
+        setCaretPosition(_oldCaretPosition, inField: field)
+    }
 }
 
 internal extension MaskedTextFieldDelegate {
@@ -394,6 +397,14 @@ internal extension MaskedTextFieldDelegate {
     }
     
     func setCaretPosition(_ position: Int, inField field: UITextField) {
+        // Workaround for non-optional `field.beginningOfDocument`, which could actually be nil if field doesn't have focus
+        guard field.isFirstResponder
+            else {
+                _oldCaretPosition = position
+                return
+        }
+        
+        
         if position > field.text!.count {
             return
         }
@@ -404,4 +415,3 @@ internal extension MaskedTextFieldDelegate {
         _oldCaretPosition = position
     }
 }
-
